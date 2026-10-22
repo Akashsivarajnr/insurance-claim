@@ -1,6 +1,4 @@
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-
+from app.database import MongoSession
 from app.models import InsurancePolicy
 
 SAMPLE_POLICIES = [
@@ -13,10 +11,19 @@ SAMPLE_POLICIES = [
 ]
 
 
-def seed_policies(db: Session) -> None:
-    if db.scalar(select(InsurancePolicy.id).limit(1)):
+def seed_policies(db: MongoSession) -> None:
+    if db.policies.count_documents({}) > 0:
         return
     for number, name, ptype, cover, premium, desc in SAMPLE_POLICIES:
-        db.add(InsurancePolicy(policy_number=number, policy_name=name, policy_type=ptype,
-                               coverage_amount=cover, premium_amount=premium, description=desc))
-    db.commit()
+        pid = db.next_id("insurance_policies")
+        policy = InsurancePolicy(
+            id=pid,
+            policy_number=number,
+            policy_name=name,
+            policy_type=ptype,
+            coverage_amount=cover,
+            premium_amount=premium,
+            description=desc,
+            is_active=True,
+        )
+        db.policies.insert_one(policy.to_dict())

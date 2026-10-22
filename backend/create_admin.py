@@ -9,11 +9,10 @@ import getpass
 import sys
 
 from email_validator import EmailNotValidError, validate_email
-from sqlalchemy import func, select
 
 from app.core.security import hash_password
 from app.database import SessionLocal, init_db
-from app.models import Role, User
+from app.models import Role, User, utcnow
 from app.seed import seed_policies
 
 
@@ -37,16 +36,31 @@ def main() -> int:
     init_db()
     with SessionLocal() as db:
         seed_policies(db)
-        user = db.scalar(select(User).where(func.lower(User.email) == email))
-        if user:
-            user.role = Role.ADMIN.value
-            user.full_name = name
-            user.hashed_password = hash_password(password)
+        user_doc = db.users.find_one({"email": email})
+        if user_doc:
+            db.users.update_one(
+                {"id": user_doc["id"]},
+                {
+                    "$set": {
+                        "role": Role.ADMIN.value,
+                        "full_name": name,
+                        "hashed_password": hash_password(password),
+                    }
+                },
+            )
             print(f"Existing account {email} updated and set to administrator.")
         else:
-            db.add(User(full_name=name, email=email, hashed_password=hash_password(password), role=Role.ADMIN.value))
+            uid = db.next_id("users")
+            user = User(
+                id=uid,
+                full_name=name,
+                email=email,
+                hashed_password=hash_password(password),
+                role=Role.ADMIN.value,
+                created_at=utcnow(),
+            )
+            db.users.insert_one(user.to_dict())
             print(f"Administrator account created: {email}")
-        db.commit()
     return 0
 
 
