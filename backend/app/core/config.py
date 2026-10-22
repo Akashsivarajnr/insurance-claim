@@ -17,7 +17,9 @@ class Settings(BaseSettings):
     mongodb_url: str = "mongodb://localhost:27017"
     mongodb_db_name: str = "claimflow"
     upload_dir: str = str(BASE_DIR / "uploads")
-    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+    cors_origins: str = (
+        "http://localhost:5173,http://127.0.0.1:5173,https://insurance-claim-sable.vercel.app"
+    )
     max_upload_mb: int = 5
 
     @property
